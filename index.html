@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gargresult - Portal</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; overflow-x: hidden; touch-action: pan-y; }
+    .main-card { max-width: 480px; margin: 20px auto; background: #fff; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 25px; border-top: 6px solid #001f3f; position: relative; }
+    .header-box { background: #001f3f; color: white; padding: 12px; text-align: center; border-radius: 8px; font-weight: bold; margin-bottom: 20px; font-size: 18px; }
+    .data-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; font-size: 15px; }
+    .data-val { font-weight: bold; color: #000; text-align: right; }
+    .marks-row { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; flex-wrap: wrap; }
+    .mark-item { border: 2.5px solid #001f3f; border-radius: 12px; padding: 12px; text-align: center; flex: 1; min-width: 100px; background: #fcfcfc; }
+    .mark-val { font-size: 26px; font-weight: 800; color: #d9534f; }
+    .error-msg { color: #d9534f; background: #fdf2f2; padding: 12px; border-radius: 8px; display: none; margin-bottom: 15px; text-align: center; font-weight: bold; border: 1px solid #f5c6cb; }
+    
+    /* Download Modal */
+    #downloadModal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+    .modal-content { background: #fff; margin: 40% auto; padding: 25px; border-radius: 15px; width: 85%; max-width: 350px; text-align: center; }
+    .dl-btn { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #001f3f; border-radius: 10px; font-weight: bold; background: white; color: #001f3f; }
+    .dl-btn:hover { background: #001f3f; color: white; }
+
+    #hiddenDownloadArea { position: fixed; left: -5000px; top: 0; width: 600px; background: white; padding: 40px; border: 1px solid #000; }
+    .dl-title { background: #001f3f; color: white; text-align: center; padding: 15px; font-size: 22px; font-weight: bold; }
+    .disclaimer { font-size: 11px; color: #777; text-align: center; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div id="searchPage" class="main-card">
+    <h2 class="text-center mb-4" style="color: #001f3f; font-weight: 800; letter-spacing: 1px;">Gargresult</h2>
+    <div id="customAlert" class="error-msg"></div>
+    <div class="mb-3">
+      <label class="form-label small fw-bold">SELECT EXAM NAME</label>
+      <select id="examSelect" class="form-select"></select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label small fw-bold">ENTER ROLL NUMBER</label>
+      <input type="text" id="rollNo" class="form-control" placeholder="e.g. 102030">
+    </div>
+    <button id="searchBtn" onclick="checkResult()" class="btn btn-primary w-100 fw-bold py-3" style="background:#001f3f;">GET SCORECARD</button>
+  </div>
+
+  <div id="resultPage" class="main-card" style="display:none;">
+    <button class="btn btn-sm btn-outline-secondary mb-3" onclick="goBack(false)">← Back to Search</button>
+    <div id="portalDisplay"></div>
+    <button id="openDl" class="btn btn-success w-100 fw-bold mt-4 py-2" onclick="showModal()">DOWNLOAD SCORECARD</button>
+  </div>
+</div>
+
+<div id="downloadModal">
+  <div class="modal-content">
+    <h5 class="fw-bold mb-3">Save Result As</h5>
+    <button class="dl-btn" onclick="executeDownload('png')">Download Image (PNG)</button>
+    <button class="dl-btn" onclick="executeDownload('pdf')">Download Document (PDF)</button>
+    <button class="btn btn-link text-muted mt-2" onclick="hideModal()">Close</button>
+  </div>
+</div>
+
+<div id="hiddenDownloadArea">
+  <div class="dl-title">Gargresult Scorecard</div>
+  <div id="dl_exam" style="text-align:center; font-weight:bold; padding:10px; border-bottom:2px solid #001f3f;"></div>
+  <div id="dl_body" style="padding:20px 0;"></div>
+  <div class="disclaimer">Result by Raj Garg. Content verified by official sources.</div>
+</div>
+
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbza1CacQIan-V032ole6IUIvQDjGhihhZy87k2ULxtRhb10j0sO3-WcG4cWogKvh6hu_A/exec";
+
+  window.onload = function() {
+    fetch(WEB_APP_URL + "?action=getExams", { method: 'POST' })
+    .then(r => r.json()).then(data => {
+      let s = document.getElementById('examSelect');
+      s.innerHTML = '<option value="">-- Click to Select Exam --</option>';
+      data.forEach(x => { s.innerHTML += `<option value="${x.id}">${x.name}</option>`; });
+    });
+
+    window.onpopstate = function() { if(document.getElementById('resultPage').style.display === "block") goBack(true); };
+  };
+
+  function showAlert(msg) {
+    let a = document.getElementById('customAlert');
+    a.innerText = msg; a.style.display = "block";
+    document.getElementById('searchBtn').disabled = false;
+    document.getElementById('searchBtn').innerText = "GET SCORECARD";
+    setTimeout(() => a.style.display = "none", 4000);
+  }
+
+  function checkResult() {
+    let r = document.getElementById('rollNo').value.trim();
+    let e = document.getElementById('examSelect');
+    if(!e.value) return showAlert("⚠️ Please select your exam name");
+    if(!r) return showAlert("⚠️ Please enter roll number");
+
+    document.getElementById('searchBtn').disabled = true;
+    document.getElementById('searchBtn').innerText = "Finding Result...";
+
+    let fd = new FormData();
+    fd.append('action', 'getScorecard');
+    fd.append('rollNo', r);
+    fd.append('folderId', e.value);
+
+    fetch(WEB_APP_URL, { method: 'POST', body: fd })
+    .then(res => res.json()).then(displayResult);
+  }
+
+  function displayResult(d) {
+    if(d === "Not Found") return showAlert("❌ Roll Number Not Found!");
+    
+    history.pushState({page: 'result'}, "", "");
+    document.getElementById('searchPage').style.display = "none";
+    document.getElementById('resultPage').style.display = "block";
+    window.scrollTo(0,0);
+
+    let rows = ""; let marks = "";
+    const order = ["Roll no", "Rank", "Merit", "Candidate Name", "Father Name", "Mother Name", "Category", "Gender"];
+    order.forEach(k => { if(d[k]) rows += `<div class="data-row"><div>${k}:</div><div class="data-val">${d[k]}</div></div>`; });
+    for(let k in d) {
+      if((k.toLowerCase().includes("marks") || k.toLowerCase().includes("score")) && !order.includes(k)) {
+        marks += `<div class="mark-item"><div class="mark-val">${d[k]}</div><div class="small fw-bold">${k}</div></div>`;
+      }
+    }
+
+    document.getElementById('portalDisplay').innerHTML = `<div class="header-box">CANDIDATE SCORECARD</div>` + rows + `<div class="marks-row">${marks}</div>`;
+    document.getElementById('dl_body').innerHTML = rows + `<div class="marks-row">${marks}</div>`;
+    document.getElementById('dl_exam').innerText = document.getElementById('examSelect').options[document.getElementById('examSelect').selectedIndex].text;
+  }
+
+  function goBack(isHardware) {
+    document.getElementById('resultPage').style.display = "none";
+    document.getElementById('searchPage').style.display = "block";
+    document.getElementById('searchBtn').disabled = false;
+    document.getElementById('searchBtn').innerText = "GET SCORECARD";
+    if(!isHardware) history.back();
+  }
+
+  function showModal() { document.getElementById('downloadModal').style.display = 'block'; }
+  function hideModal() { document.getElementById('downloadModal').style.display = 'none'; }
+
+  function executeDownload(type) {
+    hideModal();
+    const btn = document.getElementById('openDl');
+    btn.innerText = "Generating File..."; btn.disabled = true;
+
+    html2canvas(document.getElementById('hiddenDownloadArea'), { scale: 2 }).then(canvas => {
+      btn.innerText = "DOWNLOAD SCORECARD"; btn.disabled = false;
+      if(type === 'pdf') {
+        const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 10, 10, 190, (canvas.height * 190) / canvas.width);
+        pdf.save("Gargresult_Scorecard.pdf");
+      } else {
+        let link = document.createElement('a');
+        link.download = 'Gargresult_Scorecard.png';
+        link.href = canvas.toDataURL();
+        link.click();
+      }
+    });
+  }
+</script>
+</body>
+  </html>
