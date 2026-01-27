@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gargresult Portal</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Wahi purani mast theme */
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
+        h2 { color: #2c3e50; margin-bottom: 20px; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        select, input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; background-color: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; transition: 0.3s; margin-top: 10px; font-weight: bold; }
+        button:hover { background-color: #2980b9; }
+        #resultWrapper { margin-top: 30px; display: none; width: 100%; max-width: 600px; }
+        #scorecard { background: white; padding: 40px; border: 2px solid #333; position: relative; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.05); }
+        .result-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .result-item strong { color: #2c3e50; text-transform: capitalize; }
+        .actions { margin-top: 20px; display: flex; gap: 10px; }
+        .btn-download { background-color: #27ae60; }
+        .loading { display: none; color: #3498db; font-weight: bold; margin: 15px 0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Gargresult Portal</h2>
+    <select id="examSelect">
+        <option value="">-- Select Your Exam --</option>
+    </select>
+    <input type="text" id="rollNo" placeholder="Enter Roll Number">
+    <button onclick="fetchResult()">View Result</button>
+    <div id="loader" class="loading">Fetching Data... Please wait.</div>
+</div>
+
+<div id="resultWrapper">
+    <div id="scorecard">
+        <h3 style="text-align:center; text-transform:uppercase; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px;">Scorecard / Result</h3>
+        <div id="resultContent"></div>
+        <div style="text-align:center; font-size:12px; margin-top:30px; color:#888; border-top: 1px solid #eee; padding-top: 10px;">
+            This is a computer-generated result.
+        </div>
+    </div>
+    <div class="actions">
+        <button class="btn-download" onclick="downloadPNG()">Download Image</button>
+        <button class="btn-download" style="background-color: #e67e22;" onclick="downloadPDF()">Download PDF</button>
+    </div>
+</div>
+
+<script>
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbza1CacQIan-V032ole6IUIvQDjGhihhZy87k2ULxtRhb10j0sO3-WcG4cWogKvh6hu_A/exec";
+
+    // Auto-load Exams
+    window.onload = function() {
+        fetch(`${WEB_APP_URL}?action=getExams`)
+            .then(res => res.json())
+            .then(data => {
+                const select = document.getElementById('examSelect');
+                data.forEach(item => {
+                    let opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item.name;
+                    select.appendChild(opt);
+                });
+            })
+            .catch(err => console.error("Error loading exams:", err));
+    };
+
+    function fetchResult() {
+        const rollNo = document.getElementById('rollNo').value;
+        const folderId = document.getElementById('examSelect').value;
+        const loader = document.getElementById('loader');
+        const wrapper = document.getElementById('resultWrapper');
+
+        if(!rollNo || !folderId) { alert("Please select exam and enter roll number."); return; }
+
+        loader.style.display = "block";
+        wrapper.style.display = "none";
+
+        // Calling Google Script
+        fetch(`${WEB_APP_URL}?action=getScorecard&rollNo=${rollNo}&folderId=${folderId}`)
+        .then(res => res.json())
+        .then(data => {
+            loader.style.display = "none";
+            if(data === "Not Found" || data === "Error") {
+                alert("Roll Number not found. Please check and try again.");
+            } else {
+                displayResult(data);
+            }
+        })
+        .catch(err => {
+            loader.style.display = "none";
+            alert("Connection Error. Try again.");
+        });
+    }
+
+    function displayResult(data) {
+        const container = document.getElementById('resultContent');
+        container.innerHTML = "";
+        for(let key in data) {
+            container.innerHTML += `<div class="result-item"><strong>${key}:</strong> <span>${data[key]}</span></div>`;
+        }
+        document.getElementById('resultWrapper').style.display = "block";
+    }
+
+    function downloadPNG() {
+        const element = document.getElementById('scorecard');
+        html2canvas(element).then(canvas => {
+            let link = document.createElement('a');
+            link.download = 'Result.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        });
+    }
+
+    function downloadPDF() {
+        const element = document.getElementById('scorecard');
+        const opt = { margin: 0.5, filename: 'Result.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+        html2pdf().set(opt).from(element).save();
+    }
+</script>
+
+</body>
+  </html>
