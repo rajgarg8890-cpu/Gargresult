@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Garg.Result 2026</title>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <style>
+    body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 15px; }
+    .main-card { width: 100%; max-width: 450px; background: #fff; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 25px; border-top: 8px solid #001f3f; }
+    .header-title { color: #001f3f; font-weight: 800; text-align: center; margin-bottom: 20px; font-size: 1.4rem; }
+    .form-label { font-weight: 700; color: #444; font-size: 0.8rem; text-transform: uppercase; }
+    .btn-search { background: #001f3f; color: white; font-weight: 700; padding: 12px; border-radius: 10px; width: 100%; border: none; }
+    .blue-banner { background: #001f3f; color: white; text-align: center; padding: 12px; border-radius: 8px; margin-bottom: 20px; }
+    .data-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #eee; font-size: 0.85rem; }
+    .data-label { color: #666; font-weight: 600; text-transform: capitalize; }
+    .data-val { color: #000; font-weight: 800; text-align: right; }
+    .marks-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    .mark-box { border: 2.5px solid #001f3f; border-radius: 12px; padding: 10px; text-align: center; flex: 1; min-width: 120px; }
+    .mark-val { font-size: 1.4rem; font-weight: 800; color: #d9534f; }
+    .mark-label { font-size: 0.7rem; font-weight: 800; color: #000; text-transform: uppercase; }
+    .disclaimer { font-size: 10px; color: #777; text-align: center; margin-top: 20px; border-top: 1px dashed #ccc; padding-top: 10px; }
+    #hiddenDownloadArea { position: fixed; left: -9999px; width: 600px; background: #f0f2f5; padding: 40px; }
+    .dl-border-box { background: white; border: 12px solid #001f3f; border-radius: 20px; padding: 30px; }
+    #customAlert { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 20px rgba(0,0,0,0.5); z-index: 1000; width: 80%; max-width: 320px; text-align: center; }
+    #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+  </style>
+</head>
+<body>
+
+<div id="overlay"></div>
+<div id="customAlert"><p id="alertText" style="font-weight:600; margin-bottom: 15px;"></p><button class="btn btn-sm btn-dark" onclick="closeAlert()">OK</button></div>
+
+<div class="main-card">
+  <div id="searchPage">
+    <h3 class="header-title">Result Portal 2026</h3>
+    <div class="mb-3"><label class="form-label">SELECT EXAM</label><select id="examSelect" class="form-select"></select></div>
+    <div class="mb-4"><label class="form-label">ROLL NUMBER</label><input type="text" id="rollNo" class="form-control" placeholder="Enter Roll Number"></div>
+    <button id="searchBtn" onclick="checkResult()" class="btn btn-search">GET SCORECARD</button>
+    <div class="disclaimer"><b>Result by Raj Garg</b><br>Official data record portal.</div>
+  </div>
+
+  <div id="resultPage" style="display:none;">
+    <button class="btn btn-sm btn-outline-secondary mb-3" onclick="goHome()">← Back</button>
+    <div id="portalDisplay"></div>
+    <div class="mt-4 input-group">
+      <select id="formatSelect" class="form-select form-select-sm" style="max-width:80px;"><option value="png">PNG</option><option value="jpg">JPG</option><option value="pdf">PDF</option></select>
+      <button id="dlBtn" class="btn btn-success btn-sm fw-bold flex-grow-1" onclick="startDownload()">Download</button>
+    </div>
+  </div>
+</div>
+
+<div id="hiddenDownloadArea"><div class="dl-border-box" id="dl_content"></div></div>
+
+<script>
+  const S_URL = "https://script.google.com/macros/s/AKfycbw9uyEpWJmIobf6OUjKQj4DlnuOb_ZvhjbLdgBtoWm8vc7TYmip8B1EGvJyQMHL1mxw/exec";
+
+  window.onload = () => {
+    fetch(`${S_URL}?action=getExams`).then(r => r.json()).then(d => {
+      let s = document.getElementById('examSelect');
+      s.innerHTML = '<option value="">-- Choose Exam Name --</option>';
+      d.forEach(ex => s.innerHTML += `<option value="${ex.id}">${ex.name}</option>`);
+    }).catch(e => console.log("Load Error"));
+  };
+
+  function showAlert(t){ document.getElementById('alertText').innerText=t; document.getElementById('overlay').style.display="block"; document.getElementById('customAlert').style.display="block"; }
+  function closeAlert(){ document.getElementById('overlay').style.display="none"; document.getElementById('customAlert').style.display="none"; }
+  function goHome(){ document.getElementById('resultPage').style.display="none"; document.getElementById('searchPage').style.display="block"; document.getElementById('rollNo').value=""; }
+
+  function checkResult() {
+    let r = document.getElementById('rollNo').value.trim(), f = document.getElementById('examSelect');
+    if(!f.value || !r) return showAlert("Please select exam & enter roll no.");
+    
+    let b = document.getElementById('searchBtn'); b.disabled = true; b.innerText = "Searching...";
+    
+    fetch(`${S_URL}?action=getScorecard&rollNo=${r}&folderId=${f.value}`).then(res => res.json()).then(data => {
+      b.disabled = false; b.innerText = "GET SCORECARD";
+      if(data === "Not Found") return showAlert("Roll no not found. Please check the roll no");
+      showScorecard(data, f.options[f.selectedIndex].text);
+    }).catch(() => { b.disabled = false; b.innerText = "GET SCORECARD"; showAlert("Server Error. Try again."); });
+  }
+
+  function showScorecard(d, ex) {
+    document.getElementById('searchPage').style.display = "none";
+    document.getElementById('resultPage').style.display = "block";
+    let r = "", m = "";
+    
+    Object.keys(d).forEach(k => {
+      let val = d[k];
+      if(val !== "" && val !== null && val !== undefined) {
+        if(k.toLowerCase().includes("marks") || k.toLowerCase().includes("score")) {
+          m += `<div class="mark-box"><div class="mark-val">${val}</div><div class="mark-label">${k}</div></div>`;
+        } else {
+          r += `<div class="data-row"><div class="data-label">${k}:</div><div class="data-val">${val}</div></div>`;
+        }
+      }
+    });
+    
+    const h = `<div class="blue-banner"><h5>CANDIDATE SCORECARD</h5><small>${ex}</small></div><div class="text-start">${r}</div><div class="marks-row">${m}</div><div class="disclaimer"><b>Result by Raj Garg</b><br>Generated on ${new Date().toLocaleDateString()}</div>`;
+    document.getElementById('portalDisplay').innerHTML = h;
+    document.getElementById('dl_content').innerHTML = h;
+  }
+
+  function startDownload(){
+    const f=document.getElementById('formatSelect').value, b=document.getElementById('dlBtn'); b.innerText="Processing...";
+    html2canvas(document.getElementById('hiddenDownloadArea'),{scale:2,backgroundColor:"#f0f2f5"}).then(c=>{
+      b.innerText="Download";
+      if(f==='pdf'){ const {jsPDF}=window.jspdf; const p=new jsPDF('p','mm','a4'); p.addImage(c.toDataURL('image/png'),'PNG',10,10,190,0); p.save("Result.pdf"); }
+      else { let l=document.createElement('a'); l.download='Result.'+f; l.href=c.toDataURL("image/"+(f==='jpg'?'jpeg':'png')); l.click(); }
+    });
+  }
+</script>
+</body>
+    </html>
