@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Garg.Result 2026</title>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <style>
+    body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; padding: 15px; }
+    .main-card { width: 100%; max-width: 500px; background: #fff; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); margin: auto; border: 10px solid #001f3f; position: relative; }
+    .header-box { background: #001f3f; color: white; text-align: center; padding: 20px; margin: 15px; border-radius: 12px; }
+    .header-box h4 { margin: 0; font-weight: 800; text-transform: uppercase; font-size: 1.4rem; }
+    .exam-name-sub { font-size: 0.85rem; font-weight: 600; opacity: 0.9; display: block; margin-top: 5px; }
+    .info-row { display: flex; justify-content: space-between; padding: 10px 20px; border-bottom: 1px solid #eee; }
+    .info-row:last-of-type { border-bottom: none; }
+    .lbl { color: #666; font-weight: 600; font-size: 0.9rem; text-transform: uppercase; }
+    .val { color: #000; font-weight: 800; font-size: 0.95rem; text-align: right; text-transform: uppercase; }
+    .marks-section { display: flex; justify-content: center; gap: 15px; padding: 20px; background: #f9f9f9; flex-wrap: wrap; }
+    .mark-card { border: 3px solid #001f3f; border-radius: 15px; padding: 15px; text-align: center; min-width: 140px; flex: 1; background: white; }
+    .mark-val { font-size: 1.8rem; font-weight: 900; color: #d9534f; line-height: 1; }
+    .mark-lbl { font-size: 0.75rem; font-weight: 800; color: #000; text-transform: uppercase; margin-top: 5px; }
+    .disclaimer { font-size: 11px; color: #777; text-align: center; padding: 15px; border-top: 1px dashed #ccc; line-height: 1.4; }
+    .btn-download-area { padding: 20px; text-align: center; background: white; border-radius: 0 0 15px 15px; }
+    #searchBox { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+
+<div id="searchBox">
+    <h3 class="text-center fw-bold mb-4" style="color:#001f3f">Result Portal 2026</h3>
+    <label class="small fw-bold text-muted">SELECT EXAM</label>
+    <select id="examSelect" class="form-select mb-3 shadow-sm"></select>
+    <label class="small fw-bold text-muted">ROLL NUMBER</label>
+    <input type="text" id="rollNo" class="form-control mb-4 shadow-sm" placeholder="Enter Roll Number">
+    <button id="searchBtn" onclick="checkResult()" class="btn btn-dark w-100 fw-bold py-2 shadow">GET SCORECARD</button>
+</div>
+
+<div id="resultDisplay" style="display:none; margin-top: 20px;">
+    <div class="text-center mb-3">
+        <button class="btn btn-sm btn-outline-secondary px-4 fw-bold" onclick="location.reload()">← BACK TO SEARCH</button>
+    </div>
+    
+    <div id="printArea" class="main-card">
+        <div class="header-box">
+            <h4>CANDIDATE SCORECARD</h4>
+            <span id="examTitle" class="exam-name-sub"></span>
+        </div>
+        
+        <div id="detailsList"></div>
+        
+        <div class="marks-section" id="marksRow"></div>
+        
+        <div class="disclaimer">
+            <b>Result by Raj Garg</b><br>
+            Ye result official data se liya gaya hai. Kripya official result ke liye official website par check karein.
+        </div>
+    </div>
+
+    <div class="container text-center mt-3 mb-5" style="max-width:500px">
+        <div class="btn-group w-100 shadow">
+            <button class="btn btn-success py-2 fw-bold" onclick="takeShot('png')">DOWNLOAD PNG</button>
+            <button class="btn btn-danger py-2 fw-bold" onclick="takeShot('pdf')">DOWNLOAD PDF</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const S_URL = "https://script.google.com/macros/s/AKfycbywCBDfb3qfNnkHAu5-xPbmw4Y2SqN3C1kD6BnYHt5gBiy5kLvMqv-m5I42MA0TaUI/exec";
+
+    window.onload = () => {
+        fetch(`${S_URL}?action=getExams`).then(r => r.json()).then(d => {
+            let s = document.getElementById('examSelect');
+            s.innerHTML = '<option value="">-- Choose Exam Name --</option>';
+            d.forEach(ex => s.innerHTML += `<option value="${ex.id}">${ex.name}</option>`);
+        });
+    };
+
+    function checkResult() {
+        let r = document.getElementById('rollNo').value.trim(), f = document.getElementById('examSelect');
+        if(!f.value || !r) return alert("Please fill all details!");
+        let b = document.getElementById('searchBtn'); b.innerText = "Searching..."; b.disabled = true;
+
+        fetch(`${S_URL}?action=getScorecard&rollNo=${r}&folderId=${f.value}`).then(res => res.json()).then(data => {
+            b.innerText = "GET SCORECARD"; b.disabled = false;
+            if(data === "Not Found") return alert("Roll no not found. Please check the roll no");
+            render(data, f.options[f.selectedIndex].text);
+        });
+    }
+
+    function render(data, examName) {
+        document.getElementById('searchBox').style.display = 'none';
+        document.getElementById('resultDisplay').style.display = 'block';
+        document.getElementById('examTitle').innerText = examName;
+
+        let detHtml = "", markHtml = "";
+        let marksKeywords = ["marks", "score", "total", "normalized", "raw", "result"];
+
+        Object.keys(data).forEach(key => {
+            let val = data[key];
+            if (val === "" || val === null || val === undefined || key.toLowerCase().includes("column_")) return;
+
+            let isMark = marksKeywords.some(k => key.toLowerCase().includes(k));
+            if(isMark) {
+                markHtml += `<div class="mark-card"><div class="mark-val">${val}</div><div class="mark-lbl">${key}</div></div>`;
+            } else {
+                detHtml += `<div class="info-row"><div class="lbl">${key}:</div><div class="val">${val}</div></div>`;
+            }
+        });
+
+        document.getElementById('detailsList').innerHTML = detHtml;
+        document.getElementById('marksRow').innerHTML = markHtml;
+    }
+
+    function takeShot(type) {
+        const btn = event.target;
+        const originalText = btn.innerText;
+        btn.innerText = "PROCESSING...";
+        
+        html2canvas(document.getElementById('printArea'), {
+            scale: 3,
+            useCORS: true,
+            backgroundColor: "#f0f2f5"
+        }).then(canvas => {
+            btn.innerText = originalText;
+            if(type === 'png') {
+                let a = document.createElement('a');
+                a.download = 'Scorecard_2026.png';
+                a.href = canvas.toDataURL("image/png");
+                a.click();
+            } else {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgData = canvas.toDataURL('image/png');
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                pdf.addImage(imgData, 'PNG', 0, 10, pdfWidth, pdfHeight);
+                pdf.save("Scorecard_2026.pdf");
+            }
+        });
+    }
+</script>
+</body>
+          </html>
