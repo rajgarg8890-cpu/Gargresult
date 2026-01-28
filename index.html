@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+
+<html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Garg.Result</title>
+
+<meta name="description" content="Garg.Result - Check your latest exam scorecards and results by Raj Garg."> <meta name="keywords" content="Garg.Result, Garg Result, Raj Garg, Scorecard, Exam Result 2026, Rajasthan Result, Result Portal"> <meta name="author" content="Raj Garg"> <meta name="robots" content="index, follow">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css"> <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script> <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style> body { background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 15px; } .main-card { width: 100%; max-width: 450px; background: #fff; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); padding: 25px; border-top: 8px solid #001f3f; } .header-title { color: #001f3f; font-weight: 800; text-align: center; margin-bottom: 20px; font-size: 1.6rem; letter-spacing: 1px; } .form-label { font-weight: 700; color: #444; font-size: 0.8rem; text-transform: uppercase; } .btn-search { background: #001f3f; color: white; font-weight: 700; padding: 12px; border-radius: 10px; border: none; width: 100%; transition: 0.3s; } .btn-search:hover { background: #003366; } .blue-banner { background: #001f3f; color: white; text-align: center; padding: 15px; border-radius: 8px; margin-bottom: 20px; } .blue-banner h5 { margin: 0; font-weight: 800; text-transform: uppercase; font-size: 1.1rem; } .data-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; font-size: 0.9rem; } .data-label { color: #555; font-weight: 600; } .data-val { color: #000; font-weight: 800; text-align: right; } .marks-container { display: flex; gap: 10px; margin-top: 20px; justify-content: center; } .mark-box { border: 2.5px solid #001f3f; border-radius: 12px; padding: 12px; text-align: center; flex: 1; } .mark-val { font-size: 1.5rem; font-weight: 900; color: #d9534f; line-height: 1; } .mark-label { font-size: 0.7rem; font-weight: 800; color: #000; text-transform: uppercase; margin-top: 5px; } .disclaimer { font-size: 11px; color: #666; text-align: center; margin-top: 25px; border-top: 1px dashed #ccc; padding-top: 15px; line-height: 1.4; } #hiddenDownloadArea { position: fixed; left: -9999px; width: 500px; background: #fff; } .dl-content-box { padding: 30px; border: 10px solid #001f3f; background: #fff; } #customAlert { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.3); z-index: 1000; width: 85%; max-width: 320px; text-align: center; } #overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 999; } </style>
+
+</head> <body> <div id="overlay"></div> <div id="customAlert"><p id="alertText" style="font-weight:700; color:#333;"></p><button class="btn btn-dark w-100" onclick="closeAlert()">OK</button></div>
+
+<div class="main-card"> <div id="searchPage"> <h3 class="header-title">Garg.Result</h3> <div class="mb-3"><label class="form-label">Select Exam</label><select id="examSelect" class="form-select" style="border-radius:8px;"></select></div> <div class="mb-4"><label class="form-label">Roll Number</label><input type="text" id="rollNo" class="form-control" placeholder="Enter Roll Number" style="border-radius:8px;"></div> <button id="searchBtn" onclick="checkResult()" class="btn btn-search">GET SCORECARD</button> <div class="disclaimer"><b>Result by Raj Garg</b>
+
+
+Ye scorecard official nahi hai. Official scorecard ke liye official site par visit karein.</div> </div>
+
+<div id="resultPage" style="display:none;"> <button class="btn btn-sm btn-outline-dark mb-3 fw-bold" onclick="goHome()">← BACK</button> <div id="portalDisplay"></div> <div class="mt-4 d-flex gap-2"> <select id="formatSelect" class="form-select form-select-sm" style="width:80px;"><option value="png">PNG</option><option value="pdf">PDF</option></select> <button id="dlBtn" class="btn btn-success btn-sm w-100 fw-bold" onclick="startDownload()">DOWNLOAD SCORECARD</button> </div> </div> </div>
+
+<div id="hiddenDownloadArea"><div class="dl-content-box" id="dl_content"></div></div>
+
+<script> const S_URL = "https://script.google.com/macros/s/AKfycbxhiQylNJNhCQLCSPpeL4o2zp-EMWUr1ZR1n45DY60B6tbOrxu5R5Nhivv0oLxPK1Y/exec";
+
+window.onload = () => { fetch(${S_URL}?action=getExams).then(r => r.json()).then(d => { let s = document.getElementById('examSelect'); s.innerHTML = '<option value="">-- Choose Exam --</option>'; d.forEach(ex => s.innerHTML += &lt;option value=&quot;${ex.id}&quot;&gt;${ex.name}&lt;/option&gt;); }); };
+
+function showAlert(t){ document.getElementById('alertText').innerText=t; document.getElementById('overlay').style.display="block"; document.getElementById('customAlert').style.display="block"; } function closeAlert(){ document.getElementById('overlay').style.display="none"; document.getElementById('customAlert').style.display="none"; } function goHome(){ document.getElementById('resultPage').style.display="none"; document.getElementById('searchPage').style.display="block"; document.getElementById('rollNo').value=""; }
+
+function checkResult() { let r=document.getElementById('rollNo').value.trim(), f=document.getElementById('examSelect'); if(!f.value || !r) return showAlert("Please select exam & enter roll no."); let b=document.getElementById('searchBtn'); b.disabled=true; b.innerText="Processing..."; fetch(${S_URL}?action=getScorecard&amp;rollNo=${r}&amp;folderId=${f.value}).then(res=>res.json()).then(data=>{ b.disabled=false; b.innerText="GET SCORECARD"; if(data==="Not Found") return showAlert("Roll number not found. Please check and try again."); showScorecard(data, f.options[f.selectedIndex].text); }); }
+
+function showScorecard(d, ex) { document.getElementById('searchPage').style.display="none"; document.getElementById('resultPage').style.display="block"; let rowsHtml = "", marksHtml = [];
+
+Object.keys(d).forEach(k =&gt; {
+  let val = d[k];
+  let keyLower = k.toLowerCase();
+  if(keyLower.includes(&quot;marks&quot;) || keyLower.includes(&quot;score&quot;)) {
+    marksHtml.push(`&lt;div class=&quot;mark-box&quot;&gt;&lt;div class=&quot;mark-val&quot;&gt;${val}&lt;/div&gt;&lt;div class=&quot;mark-label&quot;&gt;${k}&lt;/div&gt;&lt;/div&gt;`);
+  } else {
+    rowsHtml += `&lt;div class=&quot;data-row&quot;&gt;&lt;div class=&quot;data-label&quot;&gt;${k}:&lt;/div&gt;&lt;div class=&quot;data-val&quot;&gt;${val}&lt;/div&gt;&lt;/div&gt;`;
+  }
+});
+
+const finalMarks = `&lt;div class=&quot;marks-container&quot;&gt;${marksHtml.join(&#39;&#39;)}&lt;/div&gt;`;
+const content = `
+  &lt;div class=&quot;blue-banner&quot;&gt;&lt;h5&gt;CANDIDATE SCORECARD&lt;/h5&gt;&lt;small&gt;${ex}&lt;/small&gt;&lt;/div&gt;
+  &lt;div class=&quot;text-start&quot;&gt;${rowsHtml}&lt;/div&gt;
+  ${finalMarks}
+  &lt;div class=&quot;disclaimer&quot;&gt;&lt;b&gt;Result by Raj Garg&lt;/b&gt;<br>Ye scorecard official nahi hai. Official scorecard ke liye official site par visit karein.&lt;/div&gt;
+`;
+document.getElementById(&#39;portalDisplay&#39;).innerHTML = content;
+document.getElementById(&#39;dl_content&#39;).innerHTML = content;
+}
+
+function startDownload(){ const f=document.getElementById('formatSelect').value, b=document.getElementById('dlBtn'); b.innerText="Generating..."; b.disabled=true; html2canvas(document.getElementById('hiddenDownloadArea'),{scale:3, useCORS:true}).then(c=>{ b.innerText="DOWNLOAD SCORECARD"; b.disabled=false; if(f==='pdf'){ const {jsPDF}=window.jspdf; const p=new jsPDF('p','mm','a4'); const imgData = c.toDataURL('image/png'); p.addImage(imgData,'PNG',10,10,190,0); p.save("Scorecard.pdf"); } else { let l=document.createElement('a'); l.download='Scorecard.'+f; l.href=c.toDataURL("image/png"); l.click(); } }); } </script>
+
+</body> </html>
